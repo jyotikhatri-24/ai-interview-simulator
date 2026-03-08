@@ -12,16 +12,10 @@ const interviewResultSchema = new mongoose.Schema(
             ref: "Interview",
             required: true,
         },
-        score: {
-            type: Number,
+        evaluation: {
+            type: Object,
             required: true,
         },
-        feedback: {
-            type: String,
-            required: true,
-        },
-        strengths: [String],
-        weaknesses: [String],
     },
     { timestamps: true }
 );

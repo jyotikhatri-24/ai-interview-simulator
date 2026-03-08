@@ -4,16 +4,19 @@ const User = require("../models/User");
 
 // REGISTER
 exports.registerUser = async (req, res) => {
+  console.log("registerUser called with body:", req.body);
   try {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
+      console.log("validation failed: missing fields");
       return res.status(400).json({ message: "All fields are required" });
     }
 
     const existingUser = await User.findOne({ email: email.toLowerCase() });
 
     if (existingUser) {
+      console.log("user already exists:", email);
       return res.status(400).json({ message: "User already exists" });
     }
 
@@ -38,6 +41,7 @@ exports.registerUser = async (req, res) => {
     });
 
   } catch (error) {
+    console.error("registerUser error", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -68,9 +72,42 @@ exports.loginUser = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
+      role: user.role,
     });
 
   } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// RESET PASSWORD
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+  } catch (error) {
+    console.error("resetPassword error", error);
     res.status(500).json({ message: "Server error" });
   }
 };

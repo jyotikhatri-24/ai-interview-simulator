@@ -6,6 +6,7 @@ const InterviewResult = require("../models/InterviewResult");
 
 exports.generateQuestions = async (req, res) => {
   try {
+    const { role = "Software Engineer", testRequired = false } = req.body;
     const resume = await Resume.findOne({ user: req.user._id });
 
     if (!resume || !resume.extractedText) {
@@ -13,11 +14,11 @@ exports.generateQuestions = async (req, res) => {
     }
 
     // Call AI Service
-    const questions = await generateQuestionsFromResume(resume.extractedText, 5);
+    const assessment = await generateQuestionsFromResume(resume.extractedText, 8, role, testRequired);
 
     const interview = await Interview.create({
       user: req.user._id,
-      questions,
+      assessment,
     });
 
     res.json(interview);
@@ -40,16 +41,13 @@ exports.submitAnswers = async (req, res) => {
     await interview.save();
 
     // Trigger AI Evaluation
-    const evaluation = await evaluateInterview(interview.questions, answers);
+    const evaluation = await evaluateInterview(interview.assessment, answers);
 
     // Save Results
     const result = await InterviewResult.create({
       user: req.user._id,
       interview: interviewId,
-      score: evaluation.score,
-      feedback: evaluation.feedback,
-      strengths: evaluation.strengths || [],
-      weaknesses: evaluation.weaknesses || []
+      evaluation: evaluation
     });
 
     // Update interview mapping as well

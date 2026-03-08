@@ -1,8 +1,12 @@
+require("dotenv").config();
+
+console.log("ENV FILE TEST:", process.env.GROQ_API_KEY ? "Loaded" : "Missing");
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 
-require("dotenv").config();
+//require("dotenv").config();
+console.log(process.env.GROQ_API_KEY ? "GROQ API KEY LOADED" : "GROQ API KEY MISSING");
 
 const http = require("http");
 const { Server } = require("socket.io");

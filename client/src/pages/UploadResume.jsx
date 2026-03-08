@@ -19,7 +19,7 @@ export default function UploadResume() {
     formData.append("resume", file);
 
     try {
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:8000/api/resume/upload",
         formData,
         {
@@ -38,7 +38,17 @@ export default function UploadResume() {
       }, 1000);
 
     } catch (error) {
-      setMessage("Upload failed ❌");
+      console.error("upload error", error);
+      let msg =
+        error.response?.data?.message ||
+        error.message ||
+        "Upload failed ❌";
+      // include stack trace if backend sent it (for debugging only)
+      if (error.response?.data?.stack) {
+        msg += `\n${error.response.data.stack}`;
+        console.error("backend stack:", error.response.data.stack);
+      }
+      setMessage(msg);
     }
   };
 

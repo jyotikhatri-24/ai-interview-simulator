@@ -10,16 +10,7 @@ export default function Navbar() {
     const token = localStorage.getItem("token");
     if (token) {
       setIsLoggedIn(true);
-      try {
-        // Decode JWT payload (Base64Url encoded)
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        // Note: Our current JWT only stores the ID. To check role on frontend without an extra API call, 
-        // we'd ideally put the role in the JWT. For now, we'll fetch profile if logged in.
-      } catch (e) {
-        console.error("Invalid token");
-      }
 
-      // Fetch user profile to check role
       fetch("http://localhost:8000/api/users/profile", {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -36,7 +27,7 @@ export default function Navbar() {
     setIsLoggedIn(false);
     setIsAdmin(false);
     navigate("/");
-    window.location.reload(); // Quick way to reset state
+    window.location.reload();
   };
 
   return (
@@ -48,21 +39,39 @@ export default function Navbar() {
       justifyContent: "space-between",
       alignItems: "center"
     }}>
-      <h3 style={{ margin: 0 }}>AI Interview</h3>
-      <div>
-        <Link to="/" style={{ color: "white", marginRight: "20px", textDecoration: "none" }}>Home</Link>
+      <Link to="/" style={{ textDecoration: "none" }}>
+        <h3 style={{ margin: 0, color: "white" }}>🚀 AI Interview Simulator</h3>
+      </Link>
 
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         {isLoggedIn ? (
           <>
-            <Link to="/dashboard" style={{ color: "white", marginRight: "20px", textDecoration: "none" }}>Dashboard</Link>
-            {isAdmin && (
-              <Link to="/admin" style={{ color: "#4CAF50", marginRight: "20px", textDecoration: "none", fontWeight: "bold" }}>Admin</Link>
+            {isAdmin ? (
+              <Link to="/admin" style={{ color: "#4CAF50", textDecoration: "none", fontWeight: "bold" }}>
+                Admin Dashboard
+              </Link>
+            ) : (
+              <Link to="/dashboard" style={{ color: "white", textDecoration: "none" }}>
+                Dashboard
+              </Link>
             )}
-            <button onClick={handleLogout} style={{ padding: "5px 10px", cursor: "pointer", backgroundColor: "#ff4c4c", color: "white", border: "none", borderRadius: "5px" }}>Logout</button>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "6px 14px",
+                cursor: "pointer",
+                backgroundColor: "#ff4c4c",
+                color: "white",
+                border: "none",
+                borderRadius: "5px"
+              }}
+            >
+              Logout
+            </button>
           </>
         ) : (
           <>
-            <Link to="/login" style={{ color: "white", marginRight: "20px", textDecoration: "none" }}>Login</Link>
+            <Link to="/login" style={{ color: "white", textDecoration: "none" }}>Login</Link>
             <Link to="/register" style={{ color: "white", textDecoration: "none" }}>Register</Link>
           </>
         )}
