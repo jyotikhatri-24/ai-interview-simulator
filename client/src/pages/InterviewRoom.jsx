@@ -6,35 +6,57 @@ import { io } from "socket.io-client";
 export default function InterviewRoom() {
   const location = useLocation();
   const navigate = useNavigate();
-  const interview = location.state?.interview;
+  const [session, setSession] = useState(location.state?.interview || null);
+  const [loading, setLoading] = useState(!location.state?.interview);
 
-  // AI Assessment Object
-  const assessment = interview?.assessment;
+  const assessment = session?.assessment || session?.assessment;
+  const questions = assessment?.interview_questions || session?.questions || [];
+  const skillTest = assessment?.skill_test || session?.skillTest || null;
 
   // Stages: 0 = Briefing, 1 = Questionnaire, 2 = Skill Test
   const [stage, setStage] = useState(0);
 
-  // Questionnaire State
-  const questions = assessment?.interview_questions || [];
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questionAnswers, setQuestionAnswers] = useState([]);
   const [currentAnswer, setCurrentAnswer] = useState("");
 
-  // Skill Test State
-  const skillTest = assessment?.skill_test || null;
   const [skillAnswer, setSkillAnswer] = useState("");
 
-  // Timer & Voice
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 mins for the whole interview
+  const [timeLeft, setTimeLeft] = useState(1800);
   const [isRecording, setIsRecording] = useState(false);
+
+  // Code execution state
+  const [executing, setExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
+
+  useEffect(() => {
+    if (!session) {
+        const token = localStorage.getItem("token");
+        axios.get("http://localhost:8000/api/interview/session", {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+        .then(res => {
+            if (res.data) {
+                setSession(res.data);
+                setCurrentQuestionIndex(res.data.currentQuestionIndex || 0);
+                setQuestionAnswers(res.data.answers || []);
+                setSkillAnswer(res.data.skillAnswer || "");
+                // Resume from where left off if they were already in questions
+                if (res.data.currentQuestionIndex > 0) setStage(1);
+            }
+        })
+        .catch(err => console.error("Error fetching session", err))
+        .finally(() => setLoading(false));
+    }
+  }, [session]);
 
   const socketRef = useRef();
   const recognitionRef = useRef();
 
   useEffect(() => {
     socketRef.current = io("http://localhost:8000");
-    if (interview) {
-      socketRef.current.emit("join_interview", interview._id);
+    if (session) {
+      socketRef.current.emit("join_interview", session._id);
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -42,7 +64,6 @@ export default function InterviewRoom() {
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
-
       recognitionRef.current.onresult = (event) => {
         let finalTranscript = "";
         for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -50,10 +71,8 @@ export default function InterviewRoom() {
             finalTranscript += event.results[i][0].transcript;
           }
         }
-        if (finalTranscript) {
-          if (stage === 1) {
-            setCurrentAnswer((prev) => prev + " " + finalTranscript.trim());
-          }
+        if (finalTranscript && stage === 1) {
+          setCurrentAnswer((prev) => prev + " " + finalTranscript.trim());
         }
       };
     }
@@ -62,22 +81,14 @@ export default function InterviewRoom() {
       if (socketRef.current) socketRef.current.disconnect();
       if (recognitionRef.current) recognitionRef.current.stop();
     };
-  }, [interview, stage]);
+  }, [session, stage]);
 
   useEffect(() => {
-    if (!interview || stage === 0) return;
-
-    if (timeLeft <= 0) {
-      submitInterview(true); // Auto-submit when timer hits 0
-      return;
-    }
-
-    const timerObj = setTimeout(() => {
-      setTimeLeft(timeLeft - 1);
-    }, 1000);
-
+    if (!session || stage === 0) return;
+    if (timeLeft <= 0) { submitInterview(true); return; }
+    const timerObj = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
     return () => clearTimeout(timerObj);
-  }, [timeLeft, interview, stage]);
+  }, [timeLeft, session, stage]);
 
   const toggleRecording = () => {
     if (isRecording) {
@@ -92,7 +103,6 @@ export default function InterviewRoom() {
   const submitInterview = async (autoSubmit = false) => {
     if (isRecording) toggleRecording();
 
-    // Final answer array to send to AI
     const finalAnswers = {
       questions: questionAnswers,
       skill_test_answer: skillAnswer
@@ -106,13 +116,8 @@ export default function InterviewRoom() {
       const token = localStorage.getItem("token");
       const response = await axios.post(
         "http://localhost:8000/api/interview/submit",
-        {
-          interviewId: interview._id,
-          answers: finalAnswers
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { sessionId: session._id, answers: finalAnswers },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       navigate("/results", { state: { resultId: response.data.resultId } });
     } catch (error) {
@@ -120,31 +125,56 @@ export default function InterviewRoom() {
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
     if (isRecording) toggleRecording();
-
-    const newAnswers = [...questionAnswers, currentAnswer];
+    const newAnswers = [...questionAnswers];
+    newAnswers[currentQuestionIndex] = currentAnswer;
     setQuestionAnswers(newAnswers);
+    
+    // Partially save progress to server
+    try {
+        const token = localStorage.getItem("token");
+        await axios.post("http://localhost:8000/api/interview/answer", {
+            sessionId: session._id,
+            questionIndex: currentQuestionIndex,
+            answer: currentAnswer
+        }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) {
+        console.error("Failed to sync answer", err);
+    }
+
     setCurrentAnswer("");
 
     if (currentQuestionIndex === questions.length - 1) {
-      // Move to skill test if exists, else submit
-      if (skillTest) {
-        setStage(2);
-      } else {
-        submitInterview();
-      }
+      if (skillTest) setStage(2);
+      else submitInterview();
     } else {
       setCurrentQuestionIndex((prev) => prev + 1);
     }
   };
 
-  if (!interview || !assessment) {
+  if (loading) {
+      return (
+          <div style={s.container}>
+              <div style={s.emptyCard}>
+                  <div style={s.spinner} />
+                  <p style={{ marginTop: "16px" }}>Restoring session...</p>
+              </div>
+          </div>
+      );
+  }
+
+  if (!session || !assessment) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <p>No active interview assessment found. Please start one from the dashboard.</p>
-          <button onClick={() => navigate("/dashboard")} style={styles.buttonMain}>Go to Dashboard</button>
+      <div style={s.container}>
+        <div style={s.emptyCard}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>🎙️</div>
+          <p style={{ color: "#64748b", marginBottom: "24px", fontSize: "15px" }}>
+            No active interview assessment found. Please start one from the dashboard.
+          </p>
+          <button onClick={() => navigate("/dashboard")} style={s.btnPrimary}>
+            Go to Dashboard
+          </button>
         </div>
       </div>
     );
@@ -152,75 +182,175 @@ export default function InterviewRoom() {
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}: ${s < 10 ? '0' : ''}${s}`;
+    const sc = seconds % 60;
+    return `${m}:${sc < 10 ? "0" : ""}${sc}`;
   };
 
-  // Stage 0: Briefing
+  const progress = ((currentQuestionIndex) / questions.length) * 100;
+  const handleRunCode = async () => {
+    if (!skillAnswer.trim()) return;
+    setExecuting(true);
+    setExecutionResult(null);
+    try {
+        const token = localStorage.getItem("token");
+        const response = await axios.post("http://localhost:8000/api/execute", {
+            source_code: skillAnswer
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        setExecutionResult(response.data);
+    } catch (err) {
+        setExecutionResult({ error: "Failed to connect to execution engine" });
+    } finally {
+        setExecuting(false);
+    }
+  };
+
+  const isUrgent = timeLeft < 300;
+
+  /* ─── STAGE 0: Briefing ─── */
   if (stage === 0) {
     return (
-      <div style={styles.container}>
-        <div style={styles.cardLarge}>
-          <h2 style={styles.heading}>Pre-Interview Briefing</h2>
-          <p style={styles.subtext}>Your resume has been analyzed and your assessment is ready.</p>
+      <div style={s.stageBg}>
+        <style>{keyframesCss}</style>
+        <div style={s.briefingLayout}>
 
-          {assessment.resume_analysis && (
-            <div style={styles.sectionBox}>
-              <h3 style={styles.sectionTitle}>📄 Resume Analysis Insight</h3>
-              <p style={{ fontSize: "14px", lineHeight: "1.6" }}>{assessment.resume_analysis.summary}</p>
-              <div style={{ marginTop: "10px" }}>
-                <strong>Detected Skills: </strong>
-                {assessment.resume_analysis.key_skills_found?.join(", ")}
+          {/* Decorative left panel */}
+          <div style={s.briefingLeft}>
+            <div style={s.briefingLeftInner}>
+              <div style={s.briefingBigIcon}>🎙️</div>
+              <h2 style={s.briefingLeftTitle}>Your Interview is Ready</h2>
+              <p style={s.briefingLeftSub}>AI-powered, personalized to your resume</p>
+              <div style={s.briefingStats}>
+                <div style={s.bStat}>
+                  <span style={s.bStatNum}>{questions.length}</span>
+                  <span style={s.bStatLabel}>Questions</span>
+                </div>
+                {skillTest && (
+                  <div style={s.bStat}>
+                    <span style={s.bStatNum}>1</span>
+                    <span style={s.bStatLabel}>Skill Test</span>
+                  </div>
+                )}
+                <div style={s.bStat}>
+                  <span style={s.bStatNum}>30m</span>
+                  <span style={s.bStatLabel}>Time Limit</span>
+                </div>
               </div>
             </div>
-          )}
-
-          <div style={styles.infoBox}>
-            <p><strong>This interview consists of:</strong></p>
-            <ul style={styles.list}>
-              <li>{questions.length} conceptual interview questions.</li>
-              <li>1 hands-on {skillTest?.type || 'scenario'} assessment.</li>
-            </ul>
-            <p style={{ marginTop: "10px", color: "#e63946", fontWeight: "600" }}>Total Time Limit: 30 minutes</p>
           </div>
 
-          <button onClick={() => setStage(1)} style={styles.buttonStart}>Begin Interview Setup</button>
+          {/* Right content panel */}
+          <div style={s.briefingRight}>
+            <div style={s.briefingRightInner}>
+              <div style={s.sectionTag}>📋 Pre-Interview Briefing</div>
+              <h1 style={s.briefingTitle}>Let's set you up for success</h1>
+              <p style={s.briefingSubtitle}>
+                Your resume has been analyzed and your personalized assessment is ready.
+              </p>
+
+              {assessment.resume_analysis && (
+                <div style={s.analysisBox}>
+                  <h3 style={s.analysisTitle}>📄 Resume Analysis</h3>
+                  <p style={{ fontSize: "14px", lineHeight: "1.7", color: "#334155", marginBottom: "12px" }}>
+                    {assessment.resume_analysis.summary}
+                  </p>
+                  {assessment.resume_analysis.key_skills_found?.length > 0 && (
+                    <div style={s.skillTags}>
+                      {assessment.resume_analysis.key_skills_found.map((skill, i) => (
+                        <span key={i} style={s.skillTag}>{skill}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={s.infoBox}>
+                <p style={{ margin: "0 0 12px 0", fontWeight: "700", color: "#0f172a", fontSize: "15px" }}>
+                  📌 This session includes:
+                </p>
+                <ul style={s.infoList}>
+                  <li style={s.infoItem}>
+                    <span style={s.infoIcon}>💬</span>
+                    {questions.length} conceptual interview questions
+                  </li>
+                  {skillTest && (
+                    <li style={s.infoItem}>
+                      <span style={s.infoIcon}>💻</span>
+                      1 hands-on {skillTest?.type || "scenario"} assessment
+                    </li>
+                  )}
+                  <li style={{ ...s.infoItem, color: "#b45309" }}>
+                    <span style={s.infoIcon}>⏱️</span>
+                    30-minute time limit (starts after you click Begin)
+                  </li>
+                </ul>
+              </div>
+
+              <button onClick={() => setStage(1)} style={s.btnBegin}>
+                Begin Interview 🚀
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Stage 1: Questions
+  /* ─── STAGE 1: Questions ─── */
   if (stage === 1) {
     return (
-      <div style={styles.container}>
-        <div style={styles.headerBar}>
-          <div style={styles.timerBadge(timeLeft)}>⏳ {formatTime(timeLeft)}</div>
-          <div style={styles.progressText}>Question {currentQuestionIndex + 1} of {questions.length}</div>
+      <div style={s.stageBg}>
+        <style>{keyframesCss}</style>
+
+        {/* Top Bar */}
+        <div style={s.topBar}>
+          <div style={{ ...s.timerPill, ...(isUrgent ? s.timerUrgent : {}) }}>
+            ⏱ {formatTime(timeLeft)}
+          </div>
+          <div style={s.progressInfo}>
+            <span style={s.progressLabel}>Question {currentQuestionIndex + 1} of {questions.length}</span>
+          </div>
         </div>
 
-        <div style={styles.cardLarge}>
-          <h3 style={styles.questionHeading}>Question:</h3>
-          <p style={styles.questionText}>{questions[currentQuestionIndex]}</p>
+        {/* Progress Bar */}
+        <div style={s.progressBarTrack}>
+          <div style={{ ...s.progressBarFill, width: `${progress}%` }} />
+        </div>
 
-          <textarea
-            rows="8"
-            placeholder="Type your answer here or use the microphone..."
-            value={currentAnswer}
-            onChange={(e) => setCurrentAnswer(e.target.value)}
-            style={styles.textArea}
-          />
+        <div style={s.questionCard}>
+          <div style={s.questionMeta}>
+            <span style={s.qNumBadge}>Q{currentQuestionIndex + 1}</span>
+            <span style={s.qLabel}>Interview Question</span>
+          </div>
 
-          <div style={styles.actionBar}>
+          <p style={s.questionText}>{questions[currentQuestionIndex]}</p>
+
+          <div style={s.textareaWrapper}>
+            <textarea
+              rows="8"
+              placeholder="Type your answer here, or use the microphone below to speak your response..."
+              value={currentAnswer}
+              onChange={(e) => setCurrentAnswer(e.target.value)}
+              style={s.textArea}
+            />
+            {isRecording && (
+              <div style={s.recordingBadge}>
+                <span style={s.recordingDot} /> Recording...
+              </div>
+            )}
+          </div>
+
+          <div style={s.actionBar}>
             <button
               onClick={toggleRecording}
-              style={{ ...styles.buttonVoice, backgroundColor: isRecording ? "#ef4444" : "#10b981" }}
+              style={{ ...s.micBtn, ...(isRecording ? s.micBtnActive : {}) }}
             >
-              {isRecording ? "🔴 Stop Recording" : "🎤 Turn on Microphone"}
+              {isRecording ? "🔴 Stop Recording" : "🎤 Use Microphone"}
             </button>
 
-            <button onClick={handleNextQuestion} style={styles.buttonMain}>
-              {currentQuestionIndex === questions.length - 1 ? (skillTest ? "Proceed to Skill Test" : "Submit Interview") : "Next Question"}
+            <button onClick={handleNextQuestion} style={s.btnPrimary}>
+              {currentQuestionIndex === questions.length - 1
+                ? (skillTest ? "Proceed to Skill Test →" : "Submit Interview →")
+                : "Next Question →"}
             </button>
           </div>
         </div>
@@ -228,81 +358,148 @@ export default function InterviewRoom() {
     );
   }
 
-  // Stage 2: Skill Test (Coding or Practical)
+  /* ─── STAGE 2: Skill Test ─── */
   if (stage === 2) {
     const p = skillTest.problem;
     return (
-      <div style={styles.container}>
-        <div style={styles.headerBar}>
-          <div style={styles.timerBadge(timeLeft)}>⏳ {formatTime(timeLeft)}</div>
-          <div style={styles.progressText}>Final Stage: Hands-on Assessment</div>
+      <div style={{ ...s.stageBg, paddingTop: 0 }}>
+        <style>{keyframesCss}</style>
+
+        {/* Top Bar */}
+        <div style={s.topBarDark}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span style={s.stageTag}>Final Stage</span>
+            <span style={s.stageTitle}>Hands-on Assessment</span>
+          </div>
+          <div style={{ ...s.timerPill, ...(isUrgent ? s.timerUrgent : {}) }}>
+            ⏱ {formatTime(timeLeft)}
+          </div>
         </div>
 
-        <div style={styles.twoColLayout}>
-          {/* Left: Problem Statement */}
-          <div style={{ ...styles.cardPanel, flex: 1.2 }}>
-            {p ? (
-              <>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h2 style={styles.problemTitle}>{p.problem_title || skillTest.scenario}</h2>
+        <div style={s.splitLayout}>
+          {/* Problem Panel */}
+          <div style={{ ...s.splitPanel, flex: "1.1 1 0" }}>
+            <div style={s.panelHeader}>
+              {p && (
+                <>
+                  <h2 style={s.problemTitle}>{p.problem_title || skillTest.scenario}</h2>
                   {p.difficulty_level && (
-                    <span style={styles.difficultyBadge}>{p.difficulty_level}</span>
+                    <span style={{
+                      ...s.diffBadge,
+                      background: p.difficulty_level?.toLowerCase() === "easy"
+                        ? "#dcfce7" : p.difficulty_level?.toLowerCase() === "medium"
+                        ? "#fef3c7" : "#fee2e2",
+                      color: p.difficulty_level?.toLowerCase() === "easy"
+                        ? "#15803d" : p.difficulty_level?.toLowerCase() === "medium"
+                        ? "#b45309" : "#b91c1c",
+                    }}>
+                      {p.difficulty_level}
+                    </span>
                   )}
-                </div>
+                </>
+              )}
+            </div>
 
-                <div style={styles.scrollableContent}>
-                  <div style={styles.contentBlock}>
-                    <h4>Description</h4>
-                    <p>{p.problem_description || skillTest.candidate_task}</p>
+            <div style={s.panelBody}>
+              {p ? (
+                <>
+                  <div style={s.contentSection}>
+                    <h4 style={s.sectionHead}>📝 Description</h4>
+                    <p style={s.sectionBody}>{p.problem_description || skillTest.candidate_task}</p>
                   </div>
 
                   {p.constraints && (
-                    <div style={styles.contentBlock}>
-                      <h4>Constraints</h4>
-                      <code>{typeof p.constraints === 'object' ? JSON.stringify(p.constraints) : p.constraints}</code>
+                    <div style={s.contentSection}>
+                      <h4 style={s.sectionHead}>📐 Constraints</h4>
+                      <code style={s.codeInline}>
+                        {typeof p.constraints === "object" ? JSON.stringify(p.constraints) : p.constraints}
+                      </code>
                     </div>
                   )}
 
                   {(p.example_input || p.example_output) && (
-                    <div style={styles.exampleBox}>
-                      <p><strong>Input:</strong> <code>{typeof p.example_input === 'object' ? JSON.stringify(p.example_input) : p.example_input}</code></p>
-                      <p><strong>Output:</strong> <code>{typeof p.example_output === 'object' ? JSON.stringify(p.example_output) : p.example_output}</code></p>
-                      {p.explanation && <p><strong>Explanation:</strong> {typeof p.explanation === 'object' ? JSON.stringify(p.explanation) : p.explanation}</p>}
+                    <div style={s.exampleBox}>
+                      <h4 style={{ ...s.sectionHead, marginBottom: "10px" }}>💡 Example</h4>
+                      <p style={s.exampleLine}><strong>Input:</strong> <code>{typeof p.example_input === "object" ? JSON.stringify(p.example_input) : p.example_input}</code></p>
+                      <p style={s.exampleLine}><strong>Output:</strong> <code>{typeof p.example_output === "object" ? JSON.stringify(p.example_output) : p.example_output}</code></p>
+                      {p.explanation && (
+                        <p style={s.exampleLine}><strong>Explanation:</strong> {typeof p.explanation === "object" ? JSON.stringify(p.explanation) : p.explanation}</p>
+                      )}
                     </div>
                   )}
 
                   {skillTest.test_cases && (
-                    <div style={{ marginTop: "20px" }}>
-                      <h4>Hidden Test Cases (for Evaluation)</h4>
-                      <p style={{ fontSize: "13px", color: "#666" }}>Your code will be evaluated against {skillTest.test_cases.length} strict test cases.</p>
+                    <div style={{ ...s.contentSection, background: "#f8fafc", borderRadius: "12px", padding: "16px", marginTop: "16px" }}>
+                      <h4 style={s.sectionHead}>🧪 Test Cases</h4>
+                      <p style={{ fontSize: "13px", color: "#64748b" }}>
+                        Your solution will be evaluated against <strong>{skillTest.test_cases.length}</strong> hidden test cases.
+                      </p>
                     </div>
                   )}
-                </div>
-              </>
-            ) : (
-              <p>Provide a detailed response to the practical scenario.</p>
-            )}
+                </>
+              ) : (
+                <p style={s.sectionBody}>Provide a detailed response to the practical scenario.</p>
+              )}
+            </div>
           </div>
 
-          {/* Right: Code Editor / Text Area */}
-          <div style={{ ...styles.cardPanel, flex: 1.8, display: "flex", flexDirection: "column" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-              <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>Solution Workspace</h3>
-              <span style={{ fontSize: "12px", color: "#888", backgroundColor: "#f0f0f0", padding: "4px 10px", borderRadius: "10px" }}>
-                Auto-evaluating via AI
-              </span>
+          {/* Editor Panel */}
+          <div style={{ ...s.splitPanel, flex: "1.8 1 0", background: "#0f1117", display: "flex", flexDirection: "column" }}>
+            <div style={s.editorHeader}>
+              <div style={s.editorHeaderLeft}>
+                <span style={s.editorDot} />
+                <span style={{ ...s.editorDot, background: "#f59e0b" }} />
+                <span style={{ ...s.editorDot, background: "#10b981" }} />
+                <span style={s.editorTitle}>Solution Workspace</span>
+              </div>
+              <span style={s.editorBadge}>AI Evaluated</span>
             </div>
 
-            <textarea
-              value={skillAnswer}
-              onChange={(e) => setSkillAnswer(e.target.value)}
-              placeholder="Write your code or detailed solution here..."
-              style={styles.codeEditor}
-            />
+            <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+              <textarea
+                value={skillAnswer}
+                onChange={(e) => setSkillAnswer(e.target.value)}
+                placeholder="// Write your code or detailed solution here..."
+                style={{ ...s.codeEditor, flex: executionResult ? "0.6" : "1" }}
+              />
+              
+              {executionResult && (
+                <div style={s.outputPanel}>
+                  <div style={s.outputHeader}>
+                    <span>Terminal / Output</span>
+                    <button onClick={() => setExecutionResult(null)} style={s.closeOutput}>×</button>
+                  </div>
+                  <pre style={s.outputContent}>
+                    {executionResult.error ? (
+                        <span style={{ color: "#ef4444" }}>{executionResult.error}</span>
+                    ) : (
+                        <>
+                            {executionResult.stdout || <span style={{ color: "#64748b" }}>(No output)</span>}
+                            {executionResult.stderr && <div style={{ color: "#ef4444", marginTop: "8px" }}>{executionResult.stderr}</div>}
+                            {executionResult.compile_output && <div style={{ color: "#f59e0b", marginTop: "8px" }}>{executionResult.compile_output}</div>}
+                            <div style={s.executionMeta}>
+                                Status: {executionResult.status?.description} | Time: {executionResult.time}s | Mem: {executionResult.memory}KB
+                            </div>
+                        </>
+                    )}
+                  </pre>
+                </div>
+              )}
+            </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "15px" }}>
-              <button onClick={() => submitInterview()} style={{ ...styles.buttonMain, padding: "14px 30px", fontSize: "16px" }}>
-                Submit Final Assessment
+            <div style={s.editorFooter}>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button 
+                  onClick={handleRunCode} 
+                  disabled={executing}
+                  style={{ ...s.btnRun, opacity: executing ? 0.7 : 1 }}
+                >
+                  {executing ? "Running..." : "▶ Run Code"}
+                </button>
+                <span style={s.editorHint}>Use JavaScript. Logic and performance will be evaluated.</span>
+              </div>
+              <button onClick={() => submitInterview()} style={s.btnSubmit}>
+                Submit Assessment →
               </button>
             </div>
           </div>
@@ -314,217 +511,626 @@ export default function InterviewRoom() {
   return null;
 }
 
-const styles = {
-  container: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "30px 20px",
-    fontFamily: "'Inter', sans-serif",
+// ─── Inline keyframes ───────────────────────────────────────────────────
+const keyframesCss = `
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+`;
+
+// ─── Styles ──────────────────────────────────────────────────────────────
+const s = {
+  stageBg: {
     minHeight: "100vh",
-    backgroundColor: "#f8fafc"
+    background: "#f4f7fa",
+    fontFamily: "'Inter', sans-serif",
+    paddingBottom: "40px",
   },
-  card: {
-    backgroundColor: "white",
-    padding: "40px",
-    borderRadius: "16px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-    textAlign: "center"
-  },
-  cardLarge: {
-    backgroundColor: "white",
-    padding: "40px",
-    borderRadius: "16px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-    maxWidth: "800px",
-    margin: "0 auto",
-  },
-  cardPanel: {
-    backgroundColor: "white",
-    padding: "25px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
-    height: "calc(100vh - 150px)",
-    overflowY: "hidden",
+
+  /* Briefing */
+  briefingLayout: {
     display: "flex",
-    flexDirection: "column"
+    minHeight: "100vh",
   },
-  twoColLayout: {
+  briefingLeft: {
+    width: "380px",
+    flexShrink: 0,
+    background: "linear-gradient(160deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 40px",
+  },
+  briefingLeftInner: {
+    textAlign: "center",
+    color: "#fff",
+  },
+  briefingBigIcon: {
+    fontSize: "64px",
+    marginBottom: "24px",
+    display: "block",
+    filter: "drop-shadow(0 4px 12px rgba(99,102,241,0.5))",
+  },
+  briefingLeftTitle: {
+    fontSize: "22px",
+    fontWeight: "800",
+    marginBottom: "8px",
+    letterSpacing: "-0.3px",
+  },
+  briefingLeftSub: {
+    fontSize: "14px",
+    color: "rgba(255,255,255,0.5)",
+    marginBottom: "40px",
+  },
+  briefingStats: {
     display: "flex",
     gap: "20px",
-    alignItems: "stretch"
+    justifyContent: "center",
   },
-  heading: {
-    fontSize: "28px",
+  bStat: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    background: "rgba(255,255,255,0.06)",
+    borderRadius: "14px",
+    padding: "16px 20px",
+    border: "1px solid rgba(255,255,255,0.08)",
+  },
+  bStatNum: {
+    fontSize: "22px",
+    fontWeight: "800",
+    color: "#a5b4fc",
+    marginBottom: "4px",
+  },
+  bStatLabel: {
+    fontSize: "11px",
+    color: "rgba(255,255,255,0.4)",
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  briefingRight: {
+    flex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 50px",
+    overflowY: "auto",
+  },
+  briefingRightInner: {
+    maxWidth: "640px",
+    width: "100%",
+  },
+  sectionTag: {
+    display: "inline-block",
+    padding: "5px 14px",
+    background: "rgba(236,72,153,0.08)",
+    border: "1px solid rgba(236,72,153,0.2)",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#ec4899",
+    letterSpacing: "0.5px",
+    textTransform: "uppercase",
+    marginBottom: "16px",
+  },
+  briefingTitle: {
+    fontSize: "2rem",
     fontWeight: "800",
     color: "#0f172a",
-    margin: "0 0 10px 0"
+    letterSpacing: "-0.5px",
+    marginBottom: "10px",
   },
-  subtext: {
-    fontSize: "16px",
+  briefingSubtitle: {
+    fontSize: "15px",
     color: "#64748b",
-    marginBottom: "30px"
+    marginBottom: "28px",
+    lineHeight: "1.6",
   },
-  sectionBox: {
-    backgroundColor: "#f1f5f9",
-    borderLeft: "4px solid #3b82f6",
-    padding: "20px",
-    borderRadius: "8px",
+  analysisBox: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderLeft: "4px solid #6366f1",
+    borderRadius: "14px",
+    padding: "20px 24px",
     marginBottom: "20px",
-    textAlign: "left"
   },
-  sectionTitle: {
-    margin: "0 0 10px 0",
-    fontSize: "16px",
-    color: "#1e293b"
+  analysisTitle: {
+    fontWeight: "700",
+    fontSize: "15px",
+    color: "#0f172a",
+    marginBottom: "10px",
+  },
+  skillTags: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
+    marginTop: "10px",
+  },
+  skillTag: {
+    padding: "4px 12px",
+    background: "#fce7f3",
+    color: "#be185d",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: "600",
   },
   infoBox: {
-    backgroundColor: "#fffbeb",
+    background: "#fffbeb",
     border: "1px solid #fde68a",
-    padding: "20px",
+    borderRadius: "14px",
+    padding: "20px 24px",
+    marginBottom: "28px",
+  },
+  infoList: {
+    listStyle: "none",
+    padding: 0,
+    margin: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  infoItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontSize: "14px",
+    color: "#475569",
+    fontWeight: "500",
+  },
+  infoIcon: {
+    width: "28px",
+    height: "28px",
+    background: "#fff",
     borderRadius: "8px",
-    marginBottom: "30px",
-    textAlign: "left"
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+    fontSize: "15px",
+    flexShrink: 0,
   },
-  list: {
-    margin: "10px 0 0 0",
-    paddingLeft: "20px",
-    lineHeight: "1.8",
-    color: "#475569"
+  btnBegin: {
+    width: "100%",
+    padding: "17px",
+    background: "linear-gradient(135deg, #0f172a, #1e293b)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "999px",
+    fontSize: "16px",
+    fontWeight: "700",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 8px 24px rgba(15,23,42,0.25)",
+    transition: "all 0.2s",
   },
-  headerBar: {
+
+  /* Q&A Stage top bar */
+  topBar: {
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "20px",
-    padding: "0 10px"
+    padding: "14px 32px",
+    background: "rgba(245,208,221,0.9)",
+    backdropFilter: "blur(10px)",
+    borderBottom: "1px solid rgba(236,72,153,0.08)",
   },
-  timerBadge: (time) => ({
-    backgroundColor: time < 300 ? "#fee2e2" : "#e0e7ff",
-    color: time < 300 ? "#dc2626" : "#4f46e5",
-    padding: "8px 16px",
-    borderRadius: "20px",
+  timerPill: {
+    padding: "8px 18px",
+    background: "#fce7f3",
+    color: "#be185d",
+    borderRadius: "999px",
     fontWeight: "700",
-    fontSize: "16px",
+    fontSize: "15px",
+    letterSpacing: "0.5px",
+  },
+  timerUrgent: {
+    background: "#fee2e2",
+    color: "#dc2626",
+    animation: "pulse-ring 1.5s infinite",
+  },
+  progressInfo: {
     display: "flex",
     alignItems: "center",
-    gap: "8px"
-  }),
-  progressText: {
-    fontSize: "15px",
-    fontWeight: "600",
-    color: "#64748b"
+    gap: "12px",
   },
-  questionHeading: {
+  progressLabel: {
     fontSize: "14px",
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  progressBarTrack: {
+    height: "3px",
+    background: "#e2e8f0",
+    width: "100%",
+  },
+  progressBarFill: {
+    height: "100%",
+    background: "linear-gradient(90deg, #ec4899, #f472b6)",
+    borderRadius: "999px",
+    transition: "width 0.4s ease",
+  },
+  questionCard: {
+    maxWidth: "820px",
+    margin: "40px auto 0 auto",
+    background: "#fff",
+    borderRadius: "24px",
+    padding: "48px",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.06)",
+    border: "1px solid #e2e8f0",
+  },
+  questionMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    marginBottom: "24px",
+  },
+  qNumBadge: {
+    padding: "6px 14px",
+    background: "linear-gradient(135deg, #ec4899, #f472b6)",
+    color: "#fff",
+    borderRadius: "999px",
+    fontSize: "13px",
+    fontWeight: "700",
+  },
+  qLabel: {
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#94a3b8",
     textTransform: "uppercase",
     letterSpacing: "1px",
-    color: "#94a3b8",
-    margin: "0 0 10px 0"
   },
   questionText: {
     fontSize: "22px",
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#0f172a",
-    lineHeight: "1.4",
-    marginBottom: "30px"
+    lineHeight: "1.5",
+    marginBottom: "28px",
+    letterSpacing: "-0.2px",
+  },
+  textareaWrapper: {
+    position: "relative",
   },
   textArea: {
     width: "100%",
     padding: "20px",
-    borderRadius: "12px",
-    border: "2px solid #e2e8f0",
-    fontSize: "16px",
-    lineHeight: "1.6",
-    outline: "none",
-    resize: "vertical",
-    minHeight: "150px",
-    fontFamily: "inherit",
-    boxSizing: "border-box"
-  },
-  codeEditor: {
-    flex: 1,
-    width: "100%",
-    padding: "20px",
-    borderRadius: "12px",
+    borderRadius: "14px",
     border: "2px solid #e2e8f0",
     fontSize: "15px",
-    lineHeight: "1.6",
+    lineHeight: "1.7",
     outline: "none",
-    resize: "none",
-    fontFamily: "'Fira Code', 'Courier New', monospace",
-    backgroundColor: "#1e1e1e", // Visual cue for code editor
-    color: "#d4d4d4",
-    boxSizing: "border-box"
+    resize: "vertical",
+    minHeight: "160px",
+    fontFamily: "'Inter', sans-serif",
+    boxSizing: "border-box",
+    color: "#0f172a",
+    transition: "border-color 0.2s",
+  },
+  recordingBadge: {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "5px 12px",
+    background: "#fee2e2",
+    borderRadius: "999px",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "#dc2626",
+  },
+  recordingDot: {
+    width: "8px",
+    height: "8px",
+    background: "#ef4444",
+    borderRadius: "50%",
+    animation: "blink 1s infinite",
+    display: "inline-block",
   },
   actionBar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: "30px"
+    marginTop: "24px",
+    gap: "16px",
   },
-  buttonMain: {
-    backgroundColor: "#2563eb",
-    color: "white",
-    border: "none",
+  micBtn: {
     padding: "12px 24px",
-    borderRadius: "10px",
-    fontSize: "15px",
+    background: "#f1f5f9",
+    color: "#334155",
+    border: "2px solid #e2e8f0",
+    borderRadius: "999px",
+    fontSize: "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "background-color 0.2s"
+    fontFamily: "'Inter', sans-serif",
+    transition: "all 0.2s",
   },
-  buttonStart: {
-    backgroundColor: "#0f172a",
-    color: "white",
-    border: "none",
-    padding: "16px 32px",
-    borderRadius: "10px",
-    fontSize: "16px",
-    fontWeight: "600",
-    cursor: "pointer",
-    width: "100%"
+  micBtnActive: {
+    background: "#fee2e2",
+    color: "#dc2626",
+    border: "2px solid rgba(239,68,68,0.3)",
+    animation: "pulse-ring 1.5s infinite",
   },
-  buttonVoice: {
-    color: "white",
+  btnPrimary: {
+    padding: "14px 28px",
+    background: "linear-gradient(135deg, #be185d, #ec4899)",
+    color: "#fff",
     border: "none",
-    padding: "12px 24px",
-    borderRadius: "10px",
+    borderRadius: "999px",
     fontSize: "15px",
-    fontWeight: "600",
+    fontWeight: "700",
     cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 6px 18px rgba(236,72,153,0.35)",
+    transition: "all 0.2s",
+    whiteSpace: "nowrap",
+  },
+
+  /* Skills Stage */
+  topBarDark: {
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "14px 24px",
+    background: "#1e293b",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+  },
+  stageTag: {
+    padding: "4px 12px",
+    background: "rgba(236,72,153,0.2)",
+    borderRadius: "999px",
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#fbcfe8",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  stageTitle: {
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.7)",
+  },
+  splitLayout: {
+    display: "flex",
+    height: "calc(100vh - 52px)",
+  },
+  splitPanel: {
+    overflowY: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  },
+  panelHeader: {
+    padding: "24px 28px 16px 28px",
+    borderBottom: "1px solid #f1f5f9",
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    flexWrap: "wrap",
+  },
+  panelBody: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "24px 28px",
   },
   problemTitle: {
-    fontSize: "20px",
-    fontWeight: "700",
+    fontSize: "18px",
+    fontWeight: "800",
     color: "#0f172a",
-    margin: 0
+    margin: 0,
   },
-  difficultyBadge: {
-    backgroundColor: "#fef3c7",
-    color: "#b45309",
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontSize: "12px",
+  diffBadge: {
+    padding: "5px 12px",
+    borderRadius: "999px",
+    fontSize: "11px",
     fontWeight: "700",
-    textTransform: "uppercase"
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    flexShrink: 0,
   },
-  scrollableContent: {
-    overflowY: "auto",
-    paddingRight: "10px",
-    marginTop: "20px"
-  },
-  contentBlock: {
+  contentSection: {
     marginBottom: "20px",
-    fontSize: "15px",
+  },
+  sectionHead: {
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#475569",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+    marginBottom: "8px",
+  },
+  sectionBody: {
+    fontSize: "14px",
+    color: "#334155",
+    lineHeight: "1.7",
+    margin: 0,
+  },
+  codeInline: {
+    display: "block",
+    background: "#f1f5f9",
+    padding: "12px 16px",
+    borderRadius: "10px",
+    fontSize: "13px",
+    color: "#475569",
     lineHeight: "1.6",
-    color: "#334155"
+    wordBreak: "break-all",
   },
   exampleBox: {
-    backgroundColor: "#f8fafc",
-    padding: "15px",
-    borderRadius: "8px",
+    background: "#f8fafc",
+    borderRadius: "12px",
+    padding: "16px 20px",
     borderLeft: "4px solid #94a3b8",
+  },
+  exampleLine: {
+    margin: "0 0 8px 0",
+    fontSize: "13px",
+    color: "#334155",
+    lineHeight: "1.6",
+  },
+  editorHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "14px 20px",
+    background: "#1a1a2e",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    flexShrink: 0,
+  },
+  editorHeaderLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  editorDot: {
+    width: "12px",
+    height: "12px",
+    borderRadius: "50%",
+    background: "#ef4444",
+    display: "inline-block",
+  },
+  editorTitle: {
+    marginLeft: "8px",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.4)",
+  },
+  editorBadge: {
+    padding: "4px 12px",
+    background: "rgba(13,148,136,0.15)",
+    border: "1px solid rgba(13,148,136,0.25)",
+    borderRadius: "999px",
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "#6ee7b7",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  codeEditor: {
+    flex: 1,
+    width: "100%",
+    padding: "24px",
+    border: "none",
+    outline: "none",
+    resize: "none",
     fontSize: "14px",
-    lineHeight: "1.6"
-  }
+    lineHeight: "1.7",
+    fontFamily: "'Fira Code', 'Cascadia Code', 'Courier New', monospace",
+    background: "#0f1117",
+    color: "#e2e8f0",
+    boxSizing: "border-box",
+  },
+  editorFooter: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "16px 20px",
+    background: "#1a1a2e",
+    borderTop: "1px solid rgba(255,255,255,0.06)",
+    flexShrink: 0,
+    gap: "16px",
+    flexWrap: "wrap",
+  },
+  editorHint: {
+    fontSize: "12px",
+    color: "rgba(255,255,255,0.25)",
+  },
+  btnSubmit: {
+    padding: "12px 28px",
+    background: "linear-gradient(135deg, #ec4899, #f472b6)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "999px",
+    fontSize: "14px",
+    fontWeight: "700",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: "0 4px 14px rgba(236,72,153,0.4)",
+    transition: "all 0.2s",
+    whiteSpace: "nowrap",
+  },
+  btnRun: {
+    padding: "12px 24px",
+    background: "#334155",
+    color: "#e2e8f0",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: "999px",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontFamily: "'Inter', sans-serif",
+    transition: "all 0.2s",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  outputPanel: {
+    background: "#1a1a2e",
+    borderTop: "1px solid rgba(255,255,255,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    flex: "0.4",
+    overflow: "hidden",
+  },
+  outputHeader: {
+    padding: "10px 20px",
+    background: "rgba(255,255,255,0.03)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontSize: "11px",
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.3)",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  closeOutput: {
+    background: "none",
+    border: "none",
+    color: "rgba(255,255,255,0.5)",
+    fontSize: "18px",
+    cursor: "pointer",
+    padding: "0 5px",
+  },
+  outputContent: {
+    flex: 1,
+    margin: 0,
+    padding: "16px 20px",
+    fontSize: "13px",
+    lineHeight: "1.6",
+    color: "#6ee7b7",
+    fontFamily: "'Fira Code', monospace",
+    overflowY: "auto",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-all",
+  },
+  executionMeta: {
+    marginTop: "16px",
+    paddingTop: "12px",
+    borderTop: "1px solid rgba(255,255,255,0.05)",
+    fontSize: "11px",
+    color: "rgba(255,255,255,0.2)",
+    fontFamily: "'Inter', sans-serif",
+  },
+
+  emptyCard: {
+    background: "#fff",
+    padding: "60px",
+    borderRadius: "24px",
+    textAlign: "center",
+    maxWidth: "480px",
+    margin: "80px auto",
+    boxShadow: "0 8px 30px rgba(0,0,0,0.06)",
+  },
 };

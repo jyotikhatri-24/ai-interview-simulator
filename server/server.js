@@ -26,6 +26,8 @@ app.use("/api/resume", require("./routes/resumeRoutes")); // 👈 ADD THIS
 app.use("/api/interview", require("./routes/interviewRoutes"));
 app.use("/api/results", require("./routes/resultRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/execute", require("./routes/codeExecutionRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Backend is running 🚀");

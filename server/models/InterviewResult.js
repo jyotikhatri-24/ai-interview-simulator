@@ -20,4 +20,7 @@ const interviewResultSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+interviewResultSchema.index({ user: 1 });
+interviewResultSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model("InterviewResult", interviewResultSchema);

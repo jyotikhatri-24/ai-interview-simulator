@@ -108,12 +108,15 @@ You are an expert technical interviewer and assessment generator.
 
 The candidate is preparing for a "${role}" interview.
 
-Based on the candidate's resume below, generate a comprehensive skill test and assessment following these exact rules:
+Based on the candidate's resume below, generate a comprehensive assessment following these exact rules:
 
-1. Coding Role Assessment: If the role is a coding role (Software Engineer, Backend Developer, Frontend Developer, Full Stack Developer, ML Engineer), generate ONE complete coding challenge including problem_title, difficulty_level, problem_description, input_format, output_format, constraints, example_input, example_output, and explanation. Also generate 5 to 8 test cases with input and expected_output. Include scoring logic out of 100.
-2. Non-Coding Role Assessment: If it is a non-coding role, generate ONE practical scenario-based assessment including scenario, candidate_task, expected_solution_approach, evaluation_rubric, and scoring_criteria out of 100.
-3. Interview Questions: Provide exactly ${numQuestions} standard interview questions tailored to the resume and role.
-4. Resume Improvement Suggestions: Analyze the resume to provide suggestions for missing measurable achievements, weak project descriptions, missing relevant skills, formatting, and ATS optimization. Rewrite ONE project description to be stronger.
+1. Coding/Practical Test: ONLY if testRequired is true (currently: ${testRequired}), generate a ${role.toLowerCase().includes('engineer') || role.toLowerCase().includes('developer') ? 'coding' : 'practical'} challenge. 
+   - If generating a coding challenge, include: problem_title, difficulty_level, problem_description, input_format, output_format, constraints, example_input, example_output, explanation, and 5-8 test cases.
+   - If generating a practical scenario, include: scenario, candidate_task, expected_solution_approach, evaluation_rubric, and scoring_criteria.
+   - IF testRequired is false, the "skill_test" field MUST be null or an empty object.
+
+2. Interview Questions: Provide exactly ${numQuestions} standard interview questions tailored to the resume and role.
+3. Resume Improvement Suggestions: Analyze the resume to provide suggestions for missing measurable achievements, weak project descriptions, missing relevant skills, formatting, and ATS optimization. Rewrite ONE project description to be stronger.
 
 Resume:
 ${trimmedResume}
@@ -123,11 +126,11 @@ IMPORTANT: Return the response ONLY in valid structured JSON with the exact foll
   "resume_analysis": {},
   "interview_questions": [],
   "evaluation_framework": {},
-  "skill_test": {
+  "skill_test": ${testRequired ? `{
     "type": "coding | practical",
     "problem": {},
     "test_cases": []
-  },
+  }` : `null`},
   "scoring_system": {},
   "resume_improvements": []
 }

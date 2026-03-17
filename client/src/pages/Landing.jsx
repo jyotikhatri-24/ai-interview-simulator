@@ -19,8 +19,8 @@ export default function Landing() {
     <div style={styles.container}>
       {/* Dynamic Background */}
       <div style={styles.gradientBg}></div>
-      <div style={{ ...styles.glowOrb, top: "20%", left: "15%", backgroundColor: "rgba(100, 100, 255, 0.4)" }}></div>
-      <div style={{ ...styles.glowOrb, bottom: "20%", right: "15%", backgroundColor: "rgba(255, 100, 200, 0.4)" }}></div>
+      <div style={{ ...styles.glowOrb, top: "20%", left: "15%", backgroundColor: "rgba(236, 72, 153, 0.35)" }}></div>
+      <div style={{ ...styles.glowOrb, bottom: "20%", right: "15%", backgroundColor: "rgba(244, 114, 182, 0.3)" }}></div>
 
       <div style={{
         ...styles.heroContent,
@@ -158,14 +158,14 @@ const styles = {
   badge: {
     display: "inline-block",
     padding: "8px 16px",
-    background: "rgba(0, 123, 255, 0.15)",
-    color: "#4da3ff",
+    background: "rgba(236, 72, 153, 0.15)",
+    color: "#f9a8d4",
     borderRadius: "20px",
     fontSize: "13px",
     fontWeight: "600",
     letterSpacing: "0.5px",
     marginBottom: "20px",
-    border: "1px solid rgba(0, 123, 255, 0.3)",
+    border: "1px solid rgba(236, 72, 153, 0.3)",
   },
   title: {
     fontSize: "clamp(2.5rem, 5vw, 4rem)",
@@ -175,7 +175,7 @@ const styles = {
     color: "#ffffff",
   },
   gradientText: {
-    background: "linear-gradient(90deg, #007BFF 0%, #00d2ff 100%)",
+    background: "linear-gradient(90deg, #ec4899 0%, #f472b6 100%)",
     WebkitBackgroundClip: "text",
     WebkitTextFillColor: "transparent",
     backgroundClip: "text",
@@ -198,7 +198,7 @@ const styles = {
     padding: "16px 32px",
     fontSize: "16px",
     fontWeight: "600",
-    backgroundColor: "#007BFF",
+    backgroundColor: "#ec4899",
     color: "white",
     border: "none",
     borderRadius: "30px",
@@ -206,7 +206,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    boxShadow: "0 4px 15px rgba(0, 123, 255, 0.3)",
+    boxShadow: "0 4px 15px rgba(236, 72, 153, 0.35)",
   },
   arrow: {
     transition: "transform 0.2s ease",
