@@ -1,5 +1,8 @@
 # 🚀 AI Interview Simulator
 
+🔗 Live Frontend: https://ai-interview-simulator-bgpy-hjr00owj5.vercel.app
+⚙️ Backend API: https://ai-interview-simulator-ns0b.onrender.com
+
 **AI Interview Simulator** is an advanced, AI-powered web application designed to help job seekers practice and excel in technical interviews through realistic, personalized interview simulations.
 
 Leveraging cutting-edge Generative AI (**Groq / Llama 3**), the platform analyzes a candidate’s resume and target role to dynamically generate tailored interview experiences. It evaluates both **conceptual understanding** and **hands-on coding ability**, delivering **instant, actionable feedback** and **ATS optimization insights** to improve job readiness.
