@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 
@@ -36,7 +37,7 @@ export default function Results() {
     const fetchResult = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`http://localhost:8000/api/results/${resultId}`, {
+        const res = await axios.get(`${API_BASE_URL}/results/${resultId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setResult(res.data);

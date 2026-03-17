@@ -43,10 +43,10 @@ Follow these exact steps to successfully launch your app live to the internet.
 3. Connect your GitHub account and **Import** the `ai-interview-simulator` repository.
 4. Provide the following configurations:
    - **Project Name:** `ai-interview-simulator`
-   - **Framework Preset:** `Vite` *(Since this is a Vite React app)*
+   - **Framework Preset:** `Create React App` *(Since this is a `react-scripts` app)*
    - **Root Directory:** Click "Edit" and change it to `client` *(Important!)*
    - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
+   - **Output Directory:** `build`
 
 5. **Add Environment Variables:**
    Expand the **Environment Variables** section and add:
@@ -71,6 +71,6 @@ Because the frontend and backend live on entirely different websites now, you mu
 
 ## 🛑 Troubleshooting 
 
-- **"Network Error" when registering/logging in:** Your `VITE_API_URL` on Vercel doesn't match your Render URL, or it is missing the `/api` at the end. Check Vercel Environment Variables.
+- **"Network Error" when registering/logging in:** Your `REACT_APP_API_URL` on Vercel doesn't match your Render URL, or it is missing the `/api` at the end. Check Vercel Environment Variables.
 - **CORS Errors in Browser Console:** The `CLIENT_URL` in your Render Environment Variables doesn't exactly match your Vercel URL. Ensure there are no trailing slashes or typos.
 - **Backend goes to sleep?** Render's Free Tier automatically puts your server to sleep if no one accesses it for 15 minutes. This means the very **first** login attempt after a long break might take 30-50 seconds to respond as the server "wakes up". This is normal for the free tier.

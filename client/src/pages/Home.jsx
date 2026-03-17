@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   Target, 
   Activity, 
@@ -65,11 +66,11 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    axios.get("http://localhost:8000/api/users/profile", {
+    axios.get(`${API_BASE_URL}/users/profile`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setUser(res.data));
 
-    axios.get("http://localhost:8000/api/analytics/dashboard", {
+    axios.get(`${API_BASE_URL}/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setStats({

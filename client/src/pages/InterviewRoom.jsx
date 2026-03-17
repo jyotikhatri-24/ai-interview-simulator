@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
+import API_BASE_URL from "../config";
 
 export default function InterviewRoom() {
   const location = useLocation();
@@ -32,7 +33,7 @@ export default function InterviewRoom() {
   useEffect(() => {
     if (!session) {
         const token = localStorage.getItem("token");
-        axios.get("http://localhost:8000/api/interview/session", {
+        axios.get(`${API_BASE_URL}/interview/session`, {
             headers: { Authorization: `Bearer ${token}` }
         })
         .then(res => {
@@ -54,7 +55,7 @@ export default function InterviewRoom() {
   const recognitionRef = useRef();
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:8000");
+    socketRef.current = io(API_BASE_URL.replace("/api", ""));
     if (session) {
       socketRef.current.emit("join_interview", session._id);
     }
@@ -115,7 +116,7 @@ export default function InterviewRoom() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        "http://localhost:8000/api/interview/submit",
+        `${API_BASE_URL}/interview/submit`,
         { sessionId: session._id, answers: finalAnswers },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -134,7 +135,7 @@ export default function InterviewRoom() {
     // Partially save progress to server
     try {
         const token = localStorage.getItem("token");
-        await axios.post("http://localhost:8000/api/interview/answer", {
+        await axios.post(`${API_BASE_URL}/interview/answer`, {
             sessionId: session._id,
             questionIndex: currentQuestionIndex,
             answer: currentAnswer
@@ -193,7 +194,7 @@ export default function InterviewRoom() {
     setExecutionResult(null);
     try {
         const token = localStorage.getItem("token");
-        const response = await axios.post("http://localhost:8000/api/execute", {
+        const response = await axios.post(`${API_BASE_URL}/execute`, {
             source_code: skillAnswer
         }, { headers: { Authorization: `Bearer ${token}` } });
         setExecutionResult(response.data);

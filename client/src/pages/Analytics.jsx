@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   TrendingUp, 
   Sparkles, 
@@ -36,7 +37,7 @@ export default function Analytics() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get("http://localhost:8000/api/analytics/dashboard", {
+    axios.get(`${API_BASE_URL}/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setStats({

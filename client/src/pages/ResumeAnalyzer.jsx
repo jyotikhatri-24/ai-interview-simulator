@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   FileText, 
   CheckCircle, 
@@ -18,7 +19,7 @@ export default function ResumeAnalyzer() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get("http://localhost:8000/api/resume/current", {
+    axios.get(`${API_BASE_URL}/resume/current`, {
       headers: { Authorization: `Bearer ${token}` }
     })
     .then(res => {

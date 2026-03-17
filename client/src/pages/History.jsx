@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   Calendar, 
   ExternalLink, 
@@ -21,7 +22,7 @@ export default function History() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get("http://localhost:8000/api/analytics/dashboard", {
+    axios.get(`${API_BASE_URL}/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setHistory(res.data.recentInterviews || []);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   User, 
   Mail, 
@@ -16,7 +17,7 @@ export default function Settings() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get("http://localhost:8000/api/users/profile", {
+    axios.get(`${API_BASE_URL}/users/profile`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setUser(res.data));
   }, []);

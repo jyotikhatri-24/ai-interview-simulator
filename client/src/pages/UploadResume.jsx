@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import API_BASE_URL from "../config";
 import { 
   FileText, 
   Upload, 
@@ -48,7 +49,7 @@ export default function UploadResume() {
     setLoading(true); 
     setMessage("");
     try {
-      await axios.post("http://localhost:8000/api/resume/upload", formData, {
+      await axios.post(`${API_BASE_URL}/resume/upload`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
       setMessageType("success"); 

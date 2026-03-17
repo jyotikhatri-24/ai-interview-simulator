@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "../config";
 import { 
   Briefcase, 
   Zap, 
@@ -28,7 +29,7 @@ export default function MockInterview() {
     const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/interview/generate",
+        `${API_BASE_URL}/interview/generate`,
         { role, testRequired },
         { headers: { Authorization: `Bearer ${token}` } }
       );
