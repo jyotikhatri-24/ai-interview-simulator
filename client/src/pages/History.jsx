@@ -3,12 +3,9 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import {
   Calendar,
-  ExternalLink,
   Search,
   Filter,
-  CheckCircle2,
   Clock,
-  AlertCircle,
   ArrowUpRight,
   History as HistoryIcon
 } from 'lucide-react';

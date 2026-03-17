@@ -8,7 +8,7 @@ import {
   Check,
   ArrowRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function Settings() {
   const [user, setUser] = useState(null);

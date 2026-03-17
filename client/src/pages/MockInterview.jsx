@@ -9,9 +9,7 @@ import {
   Settings2,
   ArrowRight,
   AlertCircle,
-  Sparkles,
-  Smartphone,
-  Check
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 

@@ -14,7 +14,6 @@ import { motion } from "framer-motion";
 
 export default function ResumeAnalyzer() {
   const [resume, setResume] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -23,11 +22,9 @@ export default function ResumeAnalyzer() {
     })
       .then(res => {
         setResume(res.data);
-        setLoading(false);
       })
       .catch(() => {
         setResume(null);
-        setLoading(false);
       });
   }, []);
 

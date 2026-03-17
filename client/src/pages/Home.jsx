@@ -7,7 +7,6 @@ import {
   Trophy,
   Plus,
   MessageSquare,
-  AlertCircle,
   ArrowUpRight,
   History // Changed from History as HistoryIcon
 } from 'lucide-react';

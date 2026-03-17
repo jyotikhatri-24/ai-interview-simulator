@@ -9,7 +9,6 @@ import {
   Settings, 
   LogOut,
   Bell,
-  User,
   ChevronDown
 } from 'lucide-react';
 import { motion } from 'framer-motion';

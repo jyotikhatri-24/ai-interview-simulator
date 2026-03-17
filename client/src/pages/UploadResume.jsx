@@ -6,8 +6,7 @@ import {
   Upload,
   ArrowLeft,
   CheckCircle,
-  AlertCircle,
-  File
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from "framer-motion";
 
