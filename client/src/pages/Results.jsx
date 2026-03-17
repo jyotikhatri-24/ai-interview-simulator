@@ -36,7 +36,7 @@ export default function Results() {
     const fetchResult = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`http://localhost:8000/api/results/${resultId}`, {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/results/${resultId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setResult(res.data);

@@ -48,7 +48,7 @@ export default function UploadResume() {
     setLoading(true);
     setMessage("");
     try {
-      await axios.post("http://localhost:8000/api/resume/upload", formData, {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/resume/upload`, formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
       setMessageType("success");

@@ -65,11 +65,11 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    axios.get("http://localhost:8000/api/users/profile", {
+    axios.get(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setUser(res.data));
 
-    axios.get("http://localhost:8000/api/analytics/dashboard", {
+    axios.get(`${import.meta.env.VITE_API_URL}/api/analytics/dashboard`, {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setStats({

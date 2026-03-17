@@ -18,7 +18,7 @@ export default function ResumeAnalyzer() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get("http://localhost:8000/api/resume/current", {
+    axios.get(`${import.meta.env.VITE_API_URL}/api/resume/current`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {

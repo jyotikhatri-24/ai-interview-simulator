@@ -12,7 +12,7 @@ export default function Navbar() {
     const token = localStorage.getItem("token");
     if (token) {
       setIsLoggedIn(true);
-      axios.get("http://localhost:8000/api/users/profile", {
+      axios.get(`${import.meta.env.VITE_API_URL}/api/users/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => { if (res.data.role === "admin") setIsAdmin(true); })

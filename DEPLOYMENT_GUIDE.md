@@ -43,14 +43,15 @@ Follow these exact steps to successfully launch your app live to the internet.
 3. Connect your GitHub account and **Import** the `ai-interview-simulator` repository.
 4. Provide the following configurations:
    - **Project Name:** `ai-interview-simulator`
-   - **Framework Preset:** `Create React App`
+   - **Framework Preset:** `Other` (Vercel will detect Vite, or select `Vite` if available)
    - **Root Directory:** Click "Edit" and change it to `client`
    - **Build Command:** `npm run build`
-   - **Output Directory:** `build`
+   - **Output Directory:** `build` (Configured in `vite.config.js`)
 
 5. **Add Environment Variables:**
    Expand the **Environment Variables** section and add:
-   - `VITE_API_URL` = `https://ai-interview-backend.onrender.com/api` *(Paste the exact URL Render gave you in Part 1, and add `/api` to the end. Make sure there is **no trailing slash**)*
+   - `VITE_API_URL` = `https://ai-interview-backend.onrender.com` *(Paste the exact URL Render gave you in Part 1. Make sure there is **no trailing slash**)*
+   - `CI` = `false` *(Prevents build failures due to lint warnings)*
 
 6. Click **Deploy**.
    - Vercel will build and launch your frontend. It usually takes 1-2 minutes.
@@ -71,6 +72,6 @@ Because the frontend and backend live on entirely different websites now, you mu
 
 ## 🛑 Troubleshooting 
 
-- **"Network Error" when registering/logging in:** Your `REACT_APP_API_URL` on Vercel doesn't match your Render URL, or it is missing the `/api` at the end. Check Vercel Environment Variables.
+- **"Network Error" when registering/logging in:** Your `VITE_API_URL` on Vercel doesn't match your Render URL. Check Vercel Environment Variables.
 - **CORS Errors in Browser Console:** The `CLIENT_URL` in your Render Environment Variables doesn't exactly match your Vercel URL. Ensure there are no trailing slashes or typos.
 - **Backend goes to sleep?** Render's Free Tier automatically puts your server to sleep if no one accesses it for 15 minutes. This means the very **first** login attempt after a long break might take 30-50 seconds to respond as the server "wakes up". This is normal for the free tier.

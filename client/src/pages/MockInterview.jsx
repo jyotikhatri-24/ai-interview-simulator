@@ -28,7 +28,7 @@ export default function MockInterview() {
     const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/interview/generate",
+        `${import.meta.env.VITE_API_URL}/api/interview/generate`,
         { role, testRequired },
         { headers: { Authorization: `Bearer ${token}` } }
       );
