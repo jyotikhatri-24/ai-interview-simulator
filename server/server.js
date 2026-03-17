@@ -16,7 +16,11 @@ const server = http.createServer(app);
 
 connectDB();
 
-app.use(cors());
+const allowedOrigin = process.env.CLIENT_URL || "http://localhost:3000";
+app.use(cors({
+  origin: allowedOrigin,
+  credentials: true
+}));
 app.use(express.json());
 
 // Routes
@@ -36,7 +40,7 @@ app.get("/", (req, res) => {
 // Setup Socket.io
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: allowedOrigin,
     methods: ["GET", "POST"]
   }
 });

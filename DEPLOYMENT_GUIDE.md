@@ -43,8 +43,8 @@ Follow these exact steps to successfully launch your app live to the internet.
 3. Connect your GitHub account and **Import** the `ai-interview-simulator` repository.
 4. Provide the following configurations:
    - **Project Name:** `ai-interview-simulator`
-   - **Framework Preset:** `Create React App` *(Since this is a `react-scripts` app)*
-   - **Root Directory:** Click "Edit" and change it to `client` *(Important!)*
+   - **Framework Preset:** `Create React App`
+   - **Root Directory:** Click "Edit" and change it to `client`
    - **Build Command:** `npm run build`
    - **Output Directory:** `build`
 

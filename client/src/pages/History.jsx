@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import API_BASE_URL from "../config";
-import { 
-  Calendar, 
-  ExternalLink, 
+import {
+  Calendar,
+  ExternalLink,
   Search,
   Filter,
   CheckCircle2,
@@ -22,7 +21,7 @@ export default function History() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    axios.get(`${API_BASE_URL}/analytics/dashboard`, {
+    axios.get("http://localhost:8000/api/analytics/dashboard", {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setHistory(res.data.recentInterviews || []);
@@ -30,49 +29,49 @@ export default function History() {
     }).catch(() => setLoading(false));
   }, []);
 
-  const filteredHistory = history.filter(item => 
+  const filteredHistory = history.filter(item =>
     item.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-12">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"
       >
         <div>
-           <div className="flex items-center gap-2 mb-3">
-             <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                Timeline Archive
-             </span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+              Timeline Archive
+            </span>
           </div>
           <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Session Logs</h2>
           <p className="text-slate-400 font-bold text-lg mt-4 max-w-xl">Review every milestone, feedback loop, and performance metric.</p>
         </div>
-        
+
         <div className="flex bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-           <button className="px-6 py-3 bg-slate-50 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-50 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all">
-              Clear Logs
-           </button>
+          <button className="px-6 py-3 bg-slate-50 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest border border-slate-50 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-100 transition-all">
+            Clear Logs
+          </button>
         </div>
       </motion.div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="premium-card !p-0 overflow-hidden"
       >
         <div className="premium-card-accent" />
-        
+
         {/* Table Header / Filters */}
         <div className="p-10 border-b border-slate-100 flex flex-wrap gap-8 items-center justify-between bg-slate-50/50">
           <div className="relative flex-1 max-w-md group">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 group-focus-within:scale-110 transition-all" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by role or company..." 
+            <input
+              type="text"
+              placeholder="Search by role or company..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-16 pr-8 py-5 bg-white border-2 border-slate-100 rounded-2xl outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all font-bold text-sm tracking-tight placeholder:text-slate-200"
@@ -101,8 +100,8 @@ export default function History() {
             <tbody className="divide-y divide-slate-50">
               <AnimatePresence mode="popLayout">
                 {filteredHistory.map((item, idx) => (
-                  <motion.tr 
-                    key={item.id} 
+                  <motion.tr
+                    key={item.id}
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.05 * idx }}
@@ -116,29 +115,29 @@ export default function History() {
                         <div>
                           <p className="text-base font-black text-slate-900 tracking-tighter">{new Date(item.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
                           <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
-                             <Clock size={12} className="text-slate-300" />
-                             {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <Clock size={12} className="text-slate-300" />
+                            {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-12 py-8">
                       <div className="flex flex-col gap-1.5">
-                         <span className="text-sm font-black text-slate-900 tracking-tight">{item.role}</span>
-                         <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">Full-stack Focus</span>
+                        <span className="text-sm font-black text-slate-900 tracking-tight">{item.role}</span>
+                        <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.1em]">Full-stack Focus</span>
                       </div>
                     </td>
                     <td className="px-12 py-8">
                       <div className="flex items-center gap-4">
-                         <div className="flex-1 w-24 h-2 bg-slate-100 rounded-full overflow-hidden p-0.5">
-                            <motion.div 
-                               initial={{ width: 0 }}
-                               animate={{ width: `${item.score}%` }}
-                               transition={{ duration: 1.5, delay: 0.2 + idx * 0.1 }}
-                               className={`h-full rounded-full ${item.score >= 70 ? 'bg-emerald-500' : item.score >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
-                            />
-                         </div>
-                         <span className="text-sm font-black text-slate-900 min-w-[3ch]">{item.score}%</span>
+                        <div className="flex-1 w-24 h-2 bg-slate-100 rounded-full overflow-hidden p-0.5">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${item.score}%` }}
+                            transition={{ duration: 1.5, delay: 0.2 + idx * 0.1 }}
+                            className={`h-full rounded-full ${item.score >= 70 ? 'bg-emerald-500' : item.score >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                          />
+                        </div>
+                        <span className="text-sm font-black text-slate-900 min-w-[3ch]">{item.score}%</span>
                       </div>
                     </td>
                     <td className="px-12 py-8">
@@ -161,7 +160,7 @@ export default function History() {
 
         {/* Empty State */}
         {!loading && filteredHistory.length === 0 && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="p-40 text-center space-y-10"
@@ -179,7 +178,7 @@ export default function History() {
             {!searchTerm && (
               <div className="pt-8">
                 <Link to="/mock-interview" className="no-underline">
-                  <motion.button 
+                  <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="btn-vibrant px-12 py-5 text-sm uppercase tracking-[0.2em]"
@@ -194,10 +193,10 @@ export default function History() {
 
         {loading && (
           <div className="p-40 text-center">
-            <motion.div 
+            <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 border-[6px] border-indigo-50 border-t-indigo-600 rounded-full mx-auto" 
+              className="w-16 h-16 border-[6px] border-indigo-50 border-t-indigo-600 rounded-full mx-auto"
             />
             <p className="mt-10 text-slate-400 font-black text-[11px] uppercase tracking-[0.25em]">Syncing Timeline Data...</p>
           </div>

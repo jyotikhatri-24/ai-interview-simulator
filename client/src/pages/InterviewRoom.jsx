@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
-import API_BASE_URL from "../config";
 
 export default function InterviewRoom() {
   const location = useLocation();
@@ -32,19 +31,19 @@ export default function InterviewRoom() {
 
   useEffect(() => {
     if (!session) {
-        const token = localStorage.getItem("token");
-        axios.get(`${API_BASE_URL}/interview/session`, {
-            headers: { Authorization: `Bearer ${token}` }
-        })
+      const token = localStorage.getItem("token");
+      axios.get("http://localhost:8000/api/interview/session", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
         .then(res => {
-            if (res.data) {
-                setSession(res.data);
-                setCurrentQuestionIndex(res.data.currentQuestionIndex || 0);
-                setQuestionAnswers(res.data.answers || []);
-                setSkillAnswer(res.data.skillAnswer || "");
-                // Resume from where left off if they were already in questions
-                if (res.data.currentQuestionIndex > 0) setStage(1);
-            }
+          if (res.data) {
+            setSession(res.data);
+            setCurrentQuestionIndex(res.data.currentQuestionIndex || 0);
+            setQuestionAnswers(res.data.answers || []);
+            setSkillAnswer(res.data.skillAnswer || "");
+            // Resume from where left off if they were already in questions
+            if (res.data.currentQuestionIndex > 0) setStage(1);
+          }
         })
         .catch(err => console.error("Error fetching session", err))
         .finally(() => setLoading(false));
@@ -55,7 +54,7 @@ export default function InterviewRoom() {
   const recognitionRef = useRef();
 
   useEffect(() => {
-    socketRef.current = io(API_BASE_URL.replace("/api", ""));
+    socketRef.current = io("http://localhost:8000");
     if (session) {
       socketRef.current.emit("join_interview", session._id);
     }
@@ -116,7 +115,7 @@ export default function InterviewRoom() {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
-        `${API_BASE_URL}/interview/submit`,
+        "http://localhost:8000/api/interview/submit",
         { sessionId: session._id, answers: finalAnswers },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -131,17 +130,17 @@ export default function InterviewRoom() {
     const newAnswers = [...questionAnswers];
     newAnswers[currentQuestionIndex] = currentAnswer;
     setQuestionAnswers(newAnswers);
-    
+
     // Partially save progress to server
     try {
-        const token = localStorage.getItem("token");
-        await axios.post(`${API_BASE_URL}/interview/answer`, {
-            sessionId: session._id,
-            questionIndex: currentQuestionIndex,
-            answer: currentAnswer
-        }, { headers: { Authorization: `Bearer ${token}` } });
+      const token = localStorage.getItem("token");
+      await axios.post("http://localhost:8000/api/interview/answer", {
+        sessionId: session._id,
+        questionIndex: currentQuestionIndex,
+        answer: currentAnswer
+      }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) {
-        console.error("Failed to sync answer", err);
+      console.error("Failed to sync answer", err);
     }
 
     setCurrentAnswer("");
@@ -155,14 +154,14 @@ export default function InterviewRoom() {
   };
 
   if (loading) {
-      return (
-          <div style={s.container}>
-              <div style={s.emptyCard}>
-                  <div style={s.spinner} />
-                  <p style={{ marginTop: "16px" }}>Restoring session...</p>
-              </div>
-          </div>
-      );
+    return (
+      <div style={s.container}>
+        <div style={s.emptyCard}>
+          <div style={s.spinner} />
+          <p style={{ marginTop: "16px" }}>Restoring session...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!session || !assessment) {
@@ -193,15 +192,15 @@ export default function InterviewRoom() {
     setExecuting(true);
     setExecutionResult(null);
     try {
-        const token = localStorage.getItem("token");
-        const response = await axios.post(`${API_BASE_URL}/execute`, {
-            source_code: skillAnswer
-        }, { headers: { Authorization: `Bearer ${token}` } });
-        setExecutionResult(response.data);
+      const token = localStorage.getItem("token");
+      const response = await axios.post("http://localhost:8000/api/execute", {
+        source_code: skillAnswer
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setExecutionResult(response.data);
     } catch (err) {
-        setExecutionResult({ error: "Failed to connect to execution engine" });
+      setExecutionResult({ error: "Failed to connect to execution engine" });
     } finally {
-        setExecuting(false);
+      setExecuting(false);
     }
   };
 
@@ -389,10 +388,10 @@ export default function InterviewRoom() {
                       ...s.diffBadge,
                       background: p.difficulty_level?.toLowerCase() === "easy"
                         ? "#dcfce7" : p.difficulty_level?.toLowerCase() === "medium"
-                        ? "#fef3c7" : "#fee2e2",
+                          ? "#fef3c7" : "#fee2e2",
                       color: p.difficulty_level?.toLowerCase() === "easy"
                         ? "#15803d" : p.difficulty_level?.toLowerCase() === "medium"
-                        ? "#b45309" : "#b91c1c",
+                          ? "#b45309" : "#b91c1c",
                     }}>
                       {p.difficulty_level}
                     </span>
@@ -463,7 +462,7 @@ export default function InterviewRoom() {
                 placeholder="// Write your code or detailed solution here..."
                 style={{ ...s.codeEditor, flex: executionResult ? "0.6" : "1" }}
               />
-              
+
               {executionResult && (
                 <div style={s.outputPanel}>
                   <div style={s.outputHeader}>
@@ -472,16 +471,16 @@ export default function InterviewRoom() {
                   </div>
                   <pre style={s.outputContent}>
                     {executionResult.error ? (
-                        <span style={{ color: "#ef4444" }}>{executionResult.error}</span>
+                      <span style={{ color: "#ef4444" }}>{executionResult.error}</span>
                     ) : (
-                        <>
-                            {executionResult.stdout || <span style={{ color: "#64748b" }}>(No output)</span>}
-                            {executionResult.stderr && <div style={{ color: "#ef4444", marginTop: "8px" }}>{executionResult.stderr}</div>}
-                            {executionResult.compile_output && <div style={{ color: "#f59e0b", marginTop: "8px" }}>{executionResult.compile_output}</div>}
-                            <div style={s.executionMeta}>
-                                Status: {executionResult.status?.description} | Time: {executionResult.time}s | Mem: {executionResult.memory}KB
-                            </div>
-                        </>
+                      <>
+                        {executionResult.stdout || <span style={{ color: "#64748b" }}>(No output)</span>}
+                        {executionResult.stderr && <div style={{ color: "#ef4444", marginTop: "8px" }}>{executionResult.stderr}</div>}
+                        {executionResult.compile_output && <div style={{ color: "#f59e0b", marginTop: "8px" }}>{executionResult.compile_output}</div>}
+                        <div style={s.executionMeta}>
+                          Status: {executionResult.status?.description} | Time: {executionResult.time}s | Mem: {executionResult.memory}KB
+                        </div>
+                      </>
                     )}
                   </pre>
                 </div>
@@ -490,8 +489,8 @@ export default function InterviewRoom() {
 
             <div style={s.editorFooter}>
               <div style={{ display: "flex", gap: "10px" }}>
-                <button 
-                  onClick={handleRunCode} 
+                <button
+                  onClick={handleRunCode}
                   disabled={executing}
                   style={{ ...s.btnRun, opacity: executing ? 0.7 : 1 }}
                 >

@@ -1,12 +1,11 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
-import API_BASE_URL from "../config";
-import { 
-  FileText, 
-  Upload, 
-  ArrowLeft, 
-  CheckCircle, 
+import {
+  FileText,
+  Upload,
+  ArrowLeft,
+  CheckCircle,
   AlertCircle,
   File
 } from 'lucide-react';
@@ -21,47 +20,47 @@ export default function UploadResume() {
   const navigate = useNavigate();
 
   const handleFileChange = (f) => {
-    if (f && f.type === "application/pdf") { 
-      setFile(f); 
-      setMessage(""); 
+    if (f && f.type === "application/pdf") {
+      setFile(f);
+      setMessage("");
     }
-    else if (f) { 
-      setMessageType("error"); 
-      setMessage("Only PDF documents are accepted for neural parsing."); 
+    else if (f) {
+      setMessageType("error");
+      setMessage("Only PDF documents are accepted for neural parsing.");
     }
   };
 
-  const handleDrop = (e) => { 
-    e.preventDefault(); 
-    setDragging(false); 
-    handleFileChange(e.dataTransfer.files[0]); 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFileChange(e.dataTransfer.files[0]);
   };
 
   const handleUpload = async () => {
-    if (!file) { 
-      setMessageType("error"); 
-      setMessage("Please select a valid PDF file first."); 
-      return; 
+    if (!file) {
+      setMessageType("error");
+      setMessage("Please select a valid PDF file first.");
+      return;
     }
     const token = localStorage.getItem("token");
     const formData = new FormData();
     formData.append("resume", file);
-    setLoading(true); 
+    setLoading(true);
     setMessage("");
     try {
-      await axios.post(`${API_BASE_URL}/resume/upload`, formData, {
+      await axios.post("http://localhost:8000/api/resume/upload", formData, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
       });
-      setMessageType("success"); 
+      setMessageType("success");
       setMessage("Profile synchronized successfully! Calibrating engine...");
       setTimeout(() => navigate("/dashboard"), 1500);
     } catch (error) {
       console.error("upload error", error);
       let msg = error.response?.data?.message || "Transmission failed. Check cluster health.";
-      setMessageType("error"); 
+      setMessageType("error");
       setMessage(msg);
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,8 +72,8 @@ export default function UploadResume() {
         className="text-center space-y-4"
       >
         <Link to="/resume-analyzer" className="inline-flex items-center gap-2 text-slate-400 font-bold hover:text-indigo-600 transition-colors mb-4 no-underline group">
-           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-           <span className="text-xs uppercase tracking-[0.2em] font-black">Back to Analyzer</span>
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-xs uppercase tracking-[0.2em] font-black">Back to Analyzer</span>
         </Link>
         <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">Data Ingestion</h2>
         <p className="text-slate-400 font-bold text-lg max-w-sm mx-auto">Upload your resume to calibrate the AI interview engine.</p>
@@ -87,19 +86,19 @@ export default function UploadResume() {
         className="premium-card group"
       >
         <div className="premium-card-accent" />
-        
+
         <div className="space-y-10">
-          <label 
-            htmlFor="resume-file" 
+          <label
+            htmlFor="resume-file"
             className={`relative block rounded-[32px] border-4 border-dashed transition-all duration-700 cursor-pointer overflow-hidden p-12 text-center group/zone
               ${dragging ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-100 bg-slate-50/50 hover:border-indigo-300 hover:bg-white'} 
               ${file ? 'border-emerald-500 bg-emerald-50/30' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)} 
+            onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
           >
             <input id="resume-file" type="file" accept=".pdf" className="hidden" onChange={(e) => handleFileChange(e.target.files[0])} />
-            
+
             <div className="space-y-6">
               <div className={`w-24 h-24 rounded-[32px] flex items-center justify-center mx-auto transition-all duration-700 shadow-xl
                 ${file ? 'bg-emerald-600 text-white shadow-emerald-500/20' : 'bg-white text-slate-300 group-hover/zone:scale-110 group-hover/zone:rotate-12 group-hover/zone:text-indigo-400'}`}>
@@ -121,7 +120,7 @@ export default function UploadResume() {
                   </p>
                 </div>
               )}
-              
+
               <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] pt-4">
                 PDF only · Maximum 5.0 MB
               </p>
@@ -130,7 +129,7 @@ export default function UploadResume() {
 
           <AnimatePresence>
             {message && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -143,16 +142,16 @@ export default function UploadResume() {
             )}
           </AnimatePresence>
 
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05, y: -5 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleUpload} 
-            disabled={loading || !file} 
+            onClick={handleUpload}
+            disabled={loading || !file}
             className={`w-full py-6 rounded-[24px] font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all duration-700 flex items-center justify-center gap-3
               ${loading || !file ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-950 text-white shadow-indigo-500/20'}`}
           >
             {loading ? (
-              <motion.div 
+              <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full"

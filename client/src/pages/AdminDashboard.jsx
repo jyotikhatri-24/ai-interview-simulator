@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import API_BASE_URL from "../config";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -13,7 +12,7 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE_URL}/admin/stats`, {
+        const res = await axios.get("http://localhost:8000/api/admin/stats", {
           headers: { Authorization: `Bearer ${token}` }
         });
         setStats(res.data);

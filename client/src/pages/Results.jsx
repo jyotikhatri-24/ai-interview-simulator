@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
-import API_BASE_URL from "../config";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 
@@ -37,7 +36,7 @@ export default function Results() {
     const fetchResult = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE_URL}/results/${resultId}`, {
+        const res = await axios.get(`http://localhost:8000/api/results/${resultId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setResult(res.data);
@@ -110,11 +109,12 @@ export default function Results() {
       <style>{css}</style>
 
       {/* Hero banner */}
-      <div style={{ ...s.heroBanner, background: score >= 75
-        ? "linear-gradient(135deg, #065f46, #047857)"
-        : score >= 50
-        ? "linear-gradient(135deg, #78350f, #b45309)"
-        : "linear-gradient(135deg, #7f1d1d, #b91c1c)"
+      <div style={{
+        ...s.heroBanner, background: score >= 75
+          ? "linear-gradient(135deg, #065f46, #047857)"
+          : score >= 50
+            ? "linear-gradient(135deg, #78350f, #b45309)"
+            : "linear-gradient(135deg, #7f1d1d, #b91c1c)"
       }}>
         <div style={s.heroContent}>
           <div style={s.heroIcon}>{score >= 75 ? "🏆" : score >= 50 ? "📈" : "💪"}</div>
@@ -166,10 +166,10 @@ export default function Results() {
                 <ul style={s.swList}>
                   {strengths.length
                     ? strengths.map((s_, i) => (
-                        <li key={i} style={{ ...s.swItem, borderLeft: "3px solid #10b981" }}>
-                          {s_}
-                        </li>
-                      ))
+                      <li key={i} style={{ ...s.swItem, borderLeft: "3px solid #10b981" }}>
+                        {s_}
+                      </li>
+                    ))
                     : <li style={s.swEmpty}>–</li>
                   }
                 </ul>
@@ -183,10 +183,10 @@ export default function Results() {
                 <ul style={s.swList}>
                   {weaknesses.length
                     ? weaknesses.map((w, i) => (
-                        <li key={i} style={{ ...s.swItem, borderLeft: "3px solid #ef4444" }}>
-                          {w}
-                        </li>
-                      ))
+                      <li key={i} style={{ ...s.swItem, borderLeft: "3px solid #ef4444" }}>
+                        {w}
+                      </li>
+                    ))
                     : <li style={s.swEmpty}>–</li>
                   }
                 </ul>

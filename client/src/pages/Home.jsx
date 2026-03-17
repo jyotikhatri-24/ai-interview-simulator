@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import API_BASE_URL from "../config";
-import { 
-  Target, 
-  Activity, 
-  Trophy, 
-  Plus, 
-  MessageSquare, 
+import {
+  Target,
+  Activity,
+  Trophy,
+  Plus,
+  MessageSquare,
   AlertCircle,
   ArrowUpRight,
   History // Changed from History as HistoryIcon
@@ -17,7 +16,7 @@ import { motion } from "framer-motion";
 const AnimatedNumber = ({ value }) => {
   const displayValue = typeof value === 'string' ? parseInt(value) : value;
   const suffix = typeof value === 'string' && value.includes('%') ? '%' : '';
-  
+
   return (
     <motion.span
       initial={{ opacity: 0, y: 10 }}
@@ -30,7 +29,7 @@ const AnimatedNumber = ({ value }) => {
 };
 
 const StatCard = ({ label, value, icon: Icon, colorClass }) => (
-  <motion.div 
+  <motion.div
     whileHover={{ y: -5 }}
     className="premium-card group"
   >
@@ -51,7 +50,7 @@ const StatCard = ({ label, value, icon: Icon, colorClass }) => (
       <AnimatedNumber value={value} />
     </h3>
     <p className="text-sm font-bold text-slate-500 tracking-tight">{label}</p>
-    
+
     <div className="absolute -right-4 -bottom-4 text-slate-50 opacity-[0.03] group-hover:opacity-[0.07] group-hover:scale-110 transition-all duration-700 pointer-events-none">
       <Icon size={120} strokeWidth={1} />
     </div>
@@ -66,11 +65,11 @@ export default function Home() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    axios.get(`${API_BASE_URL}/users/profile`, {
+    axios.get("http://localhost:8000/api/users/profile", {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => setUser(res.data));
 
-    axios.get(`${API_BASE_URL}/analytics/dashboard`, {
+    axios.get("http://localhost:8000/api/analytics/dashboard", {
       headers: { Authorization: `Bearer ${token}` }
     }).then(res => {
       setStats({
@@ -92,20 +91,20 @@ export default function Home() {
           transition={{ duration: 0.6 }}
         >
           <div className="flex items-center gap-2 mb-3">
-             <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
-                Performance Dashboard
-             </span>
+            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+              Performance Dashboard
+            </span>
           </div>
           <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none">
-            Welcome back, <br className="md:hidden"/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500">{user?.name || 'Candidate'}</span>!
+            Welcome back, <br className="md:hidden" /><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500">{user?.name || 'Candidate'}</span>!
           </h2>
           <p className="text-slate-400 mt-4 font-bold text-lg max-w-lg">
             Ready to master your next interview? Your performance is trending <span className="text-emerald-500 underline underline-offset-4 decoration-2">upwards</span>.
           </p>
         </motion.div>
-        
+
         <Link to="/mock-interview" className="no-underline">
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="btn-vibrant text-lg px-10 py-5"
@@ -118,29 +117,29 @@ export default function Home() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <StatCard 
-          label="Interviews Done" 
-          value={stats.totalInterviews} 
-          icon={Target} 
-          colorClass="bg-gradient-to-br from-indigo-500 to-indigo-600" 
+        <StatCard
+          label="Interviews Done"
+          value={stats.totalInterviews}
+          icon={Target}
+          colorClass="bg-gradient-to-br from-indigo-500 to-indigo-600"
         />
-        <StatCard 
-          label="Average Score" 
-          value={`${stats.avgScore}%`} 
-          icon={Activity} 
-          colorClass="bg-gradient-to-br from-purple-500 to-purple-600" 
+        <StatCard
+          label="Average Score"
+          value={`${stats.avgScore}%`}
+          icon={Activity}
+          colorClass="bg-gradient-to-br from-purple-500 to-purple-600"
         />
-        <StatCard 
-          label="Best Score" 
-          value={`${stats.bestScore}%`} 
-          icon={Trophy} 
-          colorClass="bg-gradient-to-br from-cyan-500 to-cyan-600" 
+        <StatCard
+          label="Best Score"
+          value={`${stats.bestScore}%`}
+          icon={Trophy}
+          colorClass="bg-gradient-to-br from-cyan-500 to-cyan-600"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Quick Start Card */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -153,42 +152,42 @@ export default function Home() {
               </span>
             </div>
             <h3 className="text-4xl font-black mb-6 leading-[1.1] tracking-tighter">
-              Level up your career with <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">AI-driven role play.</span>
+              Level up your career with <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">AI-driven role play.</span>
             </h3>
             <p className="text-slate-400 mb-12 max-w-md font-bold text-lg leading-relaxed">
               We process your resume history to craft a personalized interview experience that actually challenges you.
             </p>
             <div className="flex items-center gap-6">
               <Link to="/mock-interview" className="no-underline">
-                 <motion.button 
-                   whileHover={{ scale: 1.05 }}
-                   whileTap={{ scale: 0.95 }}
-                   className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-black text-sm shadow-xl shadow-white/5 uppercase tracking-widest"
-                 >
-                   Launch Now
-                 </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-white text-slate-950 px-10 py-5 rounded-2xl font-black text-sm shadow-xl shadow-white/5 uppercase tracking-widest"
+                >
+                  Launch Now
+                </motion.button>
               </Link>
               <div className="flex -space-x-3">
-                 {[1,2,3,4].map(i => (
-                   <div key={i} className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">
-                      JS
-                   </div>
-                 ))}
-                 <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-indigo-600 flex items-center justify-center text-[10px] font-black text-white">
-                    +1k
-                 </div>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="w-10 h-10 rounded-full border-2 border-slate-900 bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-500">
+                    JS
+                  </div>
+                ))}
+                <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-indigo-600 flex items-center justify-center text-[10px] font-black text-white">
+                  +1k
+                </div>
               </div>
             </div>
           </div>
-          
+
           <div className="absolute -right-20 -bottom-20 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
           <div className="absolute right-0 top-0 p-12 opacity-5 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-1000">
-             <MessageSquare size={300} strokeWidth={1} />
+            <MessageSquare size={300} strokeWidth={1} />
           </div>
         </motion.div>
 
         {/* Recent List */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
@@ -202,11 +201,11 @@ export default function Home() {
             </h3>
             <Link to="/history" className="text-indigo-600 text-xs font-black no-underline uppercase tracking-widest hover:text-indigo-700 transition-colors">View All</Link>
           </div>
-          
+
           <div className="space-y-4 flex-1">
             {history.slice(0, 3).map((item, idx) => (
-              <motion.div 
-                key={item.id} 
+              <motion.div
+                key={item.id}
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 + idx * 0.1 }}
@@ -214,7 +213,7 @@ export default function Home() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
-                     <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                   </div>
                   <div>
                     <p className="text-xs font-black text-slate-900 tracking-tight">{new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
@@ -232,17 +231,17 @@ export default function Home() {
             {history.length === 0 && (
               <div className="text-center py-20 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100">
                 <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mx-auto text-slate-200 mb-4 border border-slate-100">
-                   <Target size={32} />
+                  <Target size={32} />
                 </div>
                 <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-[10px]">No History Yet</p>
               </div>
             )}
           </div>
-          
+
           <div className="mt-8 pt-8 border-t border-slate-50">
-             <button className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-500 transition-colors">
-                Export Session Data
-             </button>
+            <button className="w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-indigo-500 transition-colors">
+              Export Session Data
+            </button>
           </div>
         </motion.div>
       </div>

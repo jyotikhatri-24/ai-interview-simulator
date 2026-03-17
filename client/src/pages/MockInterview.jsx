@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import API_BASE_URL from "../config";
-import { 
-  Briefcase, 
-  Zap, 
-  MessageSquare, 
-  Code, 
+import {
+  Briefcase,
+  Zap,
+  MessageSquare,
+  Code,
   Settings2,
   ArrowRight,
   AlertCircle,
@@ -29,7 +28,7 @@ export default function MockInterview() {
     const token = localStorage.getItem("token");
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/interview/generate`,
+        "http://localhost:8000/api/interview/generate",
         { role, testRequired },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -50,12 +49,12 @@ export default function MockInterview() {
         className="text-center space-y-6"
       >
         <div className="flex justify-center">
-           <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[11px] font-black uppercase tracking-[0.25em] border border-indigo-100 shadow-sm">
-              Session Initialization
-           </span>
+          <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[11px] font-black uppercase tracking-[0.25em] border border-indigo-100 shadow-sm">
+            Session Initialization
+          </span>
         </div>
         <h2 className="text-6xl font-black text-slate-900 tracking-tighter leading-none">
-          Construct your <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500">Expert Persona.</span>
+          Construct your <br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500">Expert Persona.</span>
         </h2>
         <p className="text-xl text-slate-400 font-bold max-w-3xl mx-auto leading-relaxed">
           Configure your simulation parameters. Our neural engine will synthesize a unique interview trail based on your identity vector.
@@ -64,7 +63,7 @@ export default function MockInterview() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
         {/* Configuration Panel */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -109,11 +108,11 @@ export default function MockInterview() {
                   <div className={`p-4 rounded-2xl ${!testRequired ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-400'} transition-all duration-500`}>
                     <MessageSquare size={28} />
                   </div>
-                   <div className="text-left">
-                      <p className={`font-black text-lg tracking-tight ${!testRequired ? 'text-indigo-950' : 'text-slate-400'}`}>Conceptual</p>
-                      <p className={`text-[10px] uppercase font-black tracking-widest mt-1 ${!testRequired ? 'text-indigo-500' : 'text-slate-300'}`}>Logic & Culture</p>
-                   </div>
-                   {!testRequired && <div className="absolute right-6 top-6 w-2 h-2 rounded-full bg-indigo-600 animate-ping" />}
+                  <div className="text-left">
+                    <p className={`font-black text-lg tracking-tight ${!testRequired ? 'text-indigo-950' : 'text-slate-400'}`}>Conceptual</p>
+                    <p className={`text-[10px] uppercase font-black tracking-widest mt-1 ${!testRequired ? 'text-indigo-500' : 'text-slate-300'}`}>Logic & Culture</p>
+                  </div>
+                  {!testRequired && <div className="absolute right-6 top-6 w-2 h-2 rounded-full bg-indigo-600 animate-ping" />}
                 </button>
                 <button
                   type="button"
@@ -123,18 +122,18 @@ export default function MockInterview() {
                   <div className={`p-4 rounded-2xl ${testRequired ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400 group-hover:bg-purple-50 group-hover:text-purple-400'} transition-all duration-500`}>
                     <Code size={28} />
                   </div>
-                   <div className="text-left">
-                      <p className={`font-black text-lg tracking-tight ${testRequired ? 'text-purple-950' : 'text-slate-400'}`}>Full Stack</p>
-                      <p className={`text-[10px] uppercase font-black tracking-widest mt-1 ${testRequired ? 'text-purple-500' : 'text-slate-300'}`}>Code + Logic</p>
-                   </div>
-                   {testRequired && <div className="absolute right-6 top-6 w-2 h-2 rounded-full bg-purple-600 animate-ping" />}
+                  <div className="text-left">
+                    <p className={`font-black text-lg tracking-tight ${testRequired ? 'text-purple-950' : 'text-slate-400'}`}>Full Stack</p>
+                    <p className={`text-[10px] uppercase font-black tracking-widest mt-1 ${testRequired ? 'text-purple-500' : 'text-slate-300'}`}>Code + Logic</p>
+                  </div>
+                  {testRequired && <div className="absolute right-6 top-6 w-2 h-2 rounded-full bg-purple-600 animate-ping" />}
                 </button>
               </div>
             </div>
 
             <AnimatePresence>
               {error && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -155,7 +154,7 @@ export default function MockInterview() {
             >
               {loading ? (
                 <>
-                  <motion.div 
+                  <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     className="w-8 h-8 border-4 border-white/10 border-t-white rounded-full"
@@ -176,7 +175,7 @@ export default function MockInterview() {
 
         {/* Tips / Info */}
         <div className="space-y-8">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -194,7 +193,7 @@ export default function MockInterview() {
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
@@ -214,8 +213,8 @@ export default function MockInterview() {
                   { label: 'Adaptive Scenario Logic', icon: Settings2 },
                   { label: 'Identity Vector Ingestion', icon: Briefcase }
                 ].map((item, i) => (
-                  <motion.li 
-                    key={i} 
+                  <motion.li
+                    key={i}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.8 + i * 0.1 }}
